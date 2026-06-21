@@ -26,7 +26,8 @@
             ball = new Ball();
             for (let i = 0; i < rows; i++) {
                 for (let j = 0; j < cols; j++) {
-                    bricks.push(new Brick(j * (brickWidth + 10) + 35, i * (brickHeight + 10) + 30));
+                    let color = color(random(255), random(255), random(255));
+                    bricks.push(new Brick(j * (brickWidth + 10) + 35, i * (brickHeight + 10) + 30, color));
                 }
             }
         }
@@ -135,14 +136,15 @@
         }
 
         class Brick {
-            constructor(x, y) {
+            constructor(x, y, color) {
                 this.x = x;
                 this.y = y;
                 this.w = brickWidth;
                 this.h = brickHeight;
+                this.color = color;
             }
             display() {
-                fill(255, 0, 0); // 色を赤色に変更
+                fill(this.color);
                 rect(this.x, this.y, this.w, this.h);
             }
         }
