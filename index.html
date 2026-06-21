@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Snake Game</title>
+    <title>神経衰弱ゲーム</title>
     <style>
         body {
             display: flex;
@@ -11,131 +11,108 @@
             align-items: center;
             height: 100vh;
             background-color: #f0f0f0;
+            margin: 0;
         }
-        canvas {
-            border: 1px solid #000;
+        #gameCanvas {
+            border: 2px solid #000;
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
-</head>
-<body>
     <script>
-        let snake;
-        let food;
-        let resolution = 20;
-        let cols;
-        let rows;
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        const cols = 4;
+        const rows = 4;
+        const totalPairs = (cols * rows) / 2;
 
         function setup() {
-            createCanvas(400, 400);
-            frameRate(10);
-            cols = floor(width / resolution);
-            rows = floor(height / resolution);
-            snake = new Snake();
-            foodLocation();
-        }
+            createCanvas(400, 400).id('gameCanvas');
+            let values = [];
+            for (let i = 0; i < totalPairs; i++) {
+                values.push(i);
+                values.push(i);
+            }
+            values = shuffle(values);
 
-        function foodLocation() {
-            let x = floor(random(cols));
-            let y = floor(random(rows));
-            food = createVector(x, y);
+            for (let i = 0; i < cols; i++) {
+                for (let j = 0; j < rows; j++) {
+                    let card = new Card(i * 100, j * 100, values.pop());
+                    cards.push(card);
+                }
+            }
         }
 
         function draw() {
-            scale(resolution);
-            background(220);
-            if (snake.eat(food)) {
-                foodLocation();
-            }
-            snake.update();
-            snake.show();
-
-            if (snake.endGame()) {
-                print("END GAME");
-                background(255, 0, 0);
+            background(255);
+            cards.forEach(card => card.show());
+            if (matchedPairs === totalPairs) {
+                fill(0, 255, 0);
+                textSize(32);
+                textAlign(CENTER, CENTER);
+                text("You Win!", width / 2, height / 2);
                 noLoop();
             }
-            
-            noStroke();
-            fill(255, 0, 0);
-            rect(food.x, food.y, 1, 1);
         }
 
-        function keyPressed() {
-            if (keyCode === LEFT_ARROW) {
-                snake.setDir(-1, 0);
-            } else if (keyCode === RIGHT_ARROW) {
-                snake.setDir(1, 0);
-            } else if (keyCode === DOWN_ARROW) {
-                snake.setDir(0, 1);
-            } else if (keyCode === UP_ARROW) {
-                snake.setDir(0, -1);
-            }
-        }
-
-        class Snake {
-            constructor() {
-                this.body = [];
-                this.body[0] = createVector(floor(cols / 2), floor(rows / 2));
-                this.xdir = 0;
-                this.ydir = 0;
-                this.len = 0;
-            }
-
-            setDir(x, y) {
-                this.xdir = x;
-                this.ydir = y;
-            }
-
-            update() {
-                let head = this.body[this.body.length - 1].copy();
-
-                this.body.shift();
-
-                head.x += this.xdir;
-                head.y += this.ydir;
-                this.body.push(head);
-            }
-
-            grow() {
-                let head = this.body[this.body.length - 1].copy();
-                this.len++;
-                this.body.push(head);
-            }
-
-            endGame() {
-                let x = this.body[this.body.length - 1].x;
-                let y = this.body[this.body.length - 1].y;
-                if (x > cols - 1 || x < 0 || y > rows - 1 || y < 0) {
-                    return true;
-                }
-                for (let i = 0; i < this.body.length - 1; i++) {
-                    let part = this.body[i];
-                    if (part.x === x && part.y === y) {
-                        return true;
+        function mousePressed() {
+            if (flippedCards.length < 2) {
+                cards.forEach(card => {
+                    if (card.contains(mouseX, mouseY) && !card.flipped) {
+                        card.flip();
+                        flippedCards.push(card);
                     }
-                }
-                return false;
-            }
+                });
 
-            eat(pos) {
-                let x = this.body[this.body.length - 1].x;
-                let y = this.body[this.body.length - 1].y;
-                if (x === pos.x && y === pos.y) {
-                    this.grow();
-                    return true;
+                if (flippedCards.length === 2) {
+                    setTimeout(checkMatch, 1000);
                 }
-                return false;
+            }
+        }
+
+        function checkMatch() {
+            if (flippedCards[0].value === flippedCards[1].value) {
+                flippedCards[0].matched = true;
+                flippedCards[1].matched = true;
+                matchedPairs++;
+            } else {
+                flippedCards[0].flip();
+                flippedCards[1].flip();
+            }
+            flippedCards = [];
+        }
+
+        class Card {
+            constructor(x, y, value) {
+                this.x = x;
+                this.y = y;
+                this.value = value;
+                this.flipped = false;
+                this.matched = false;
             }
 
             show() {
-                for (let i = 0; i < this.body.length; i++) {
+                stroke(0);
+                fill(this.flipped || this.matched ? 200 : 100);
+                rect(this.x, this.y, 100, 100);
+                if (this.flipped || this.matched) {
                     fill(0);
-                    noStroke();
-                    rect(this.body[i].x, this.body[i].y, 1, 1);
+                    textSize(32);
+                    textAlign(CENTER, CENTER);
+                    text(this.value, this.x + 50, this.y + 50);
                 }
+            }
+
+            contains(px, py) {
+                return px > this.x && px < this.x + 100 && py > this.y && py < this.y + 100;
+            }
+
+            flip() {
+                this.flipped = !this.flipped;
             }
         }
     </script>
+</head>
+<body>
 </body>
 </html>
