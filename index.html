@@ -46,7 +46,7 @@
                 for (let j = 0; j < rows; j++) {
                     bricks.push({
                         x: i * (windowWidth / cols),
-                        y: j * 30,
+                        y: j * 60, // Changed distance between bricks and paddle to 2x
                         w: windowWidth / cols - 5,
                         h: 25,
                         destroyed: false
@@ -88,7 +88,7 @@
         function drawBricks() {
             for (let brick of bricks) {
                 if (!brick.destroyed) {
-                    fill(0, 255, 153);
+                    fill(255, 255, 0); // Changed brick color to yellow
                     rect(brick.x, brick.y, brick.w, brick.h);
                 }
             }
