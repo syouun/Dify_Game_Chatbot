@@ -1,152 +1,169 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>サイバーパンクブロック崩し</title>
+    <title>Snake Game</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             margin: 0;
-            overflow: hidden;
-            background-color: #0d0d0d;
-            color: #00ff99;
-            font-family: 'Courier New', Courier, monospace;
+            background-color: #f0f0f0;
         }
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
+        canvas {
+            border: 1px solid #000;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
 </head>
 <body>
-    <div id="score">Score: 0</div>
-    <script>
-        let bricks = [];
-        let paddle;
-        let ball;
-        let rows = 5;
-        let cols = 10;
-        let score = 0;
-        let gameOver = false;
+<script>
+    let snake;
+    let rez = 20;
+    let food;
+    let w;
+    let h;
+    let score = 0;
 
-        function setup() {
-            createCanvas(windowWidth, windowHeight);
-            resetGame();
+    function setup() {
+        createCanvas(400, 400);
+        w = floor(width / rez);
+        h = floor(height / rez);
+        frameRate(10);
+        snake = new Snake();
+        foodLocation();
+    }
+
+    function foodLocation() {
+        let x = floor(random(w));
+        let y = floor(random(h));
+        food = createVector(x, y);
+    }
+
+    function keyPressed() {
+        if (keyCode === LEFT_ARROW) {
+            snake.setDir(-1, 0);
+        } else if (keyCode === RIGHT_ARROW) {
+            snake.setDir(1, 0);
+        } else if (keyCode === DOWN_ARROW) {
+            snake.setDir(0, 1);
+        } else if (keyCode === UP_ARROW) {
+            snake.setDir(0, -1);
+        }
+    }
+
+    function draw() {
+        scale(rez);
+        background(220);
+        snake.update();
+        snake.show();
+
+        if (snake.eat(food)) {
+            foodLocation();
+            score++;
         }
 
-        function resetGame() {
-            bricks = [];
-            score = 0;
-            document.getElementById('score').innerText = 'Score: ' + score;
-            gameOver = false;
+        noStroke();
+        fill(255, 0, 0);
+        rect(food.x, food.y, 1, 1);
 
-            for (let i = 0; i < cols; i++) {
-                for (let j = 0; j < rows; j++) {
-                    bricks.push({
-                        x: i * (windowWidth / cols),
-                        y: j * 60, // Changed distance between bricks and paddle to 2x
-                        w: windowWidth / cols - 5,
-                        h: 25,
-                        destroyed: false
-                    });
-                }
-            }
+        fill(0);
+        textSize(1);
+        text('Score: ' + score, 1, 1);
 
-            paddle = {
-                x: windowWidth / 2 - 50,
-                y: windowHeight - 30,
-                w: 100,
-                h: 15
-            };
-
-            ball = {
-                x: windowWidth / 2,
-                y: windowHeight - 45,
-                r: 10,
-                xSpeed: 5,
-                ySpeed: -5
-            };
-        }
-
-        function draw() {
-            background(13);
-            drawBricks();
-            drawPaddle();
-            drawBall();
-            handleCollisions();
-
-            if (gameOver) {
-                fill(255, 0, 0);
-                textSize(32);
-                textAlign(CENTER, CENTER);
-                text('GAME OVER! Press R to Restart', windowWidth / 2, windowHeight / 2);
-            }
-        }
-
-        function drawBricks() {
-            for (let brick of bricks) {
-                if (!brick.destroyed) {
-                    fill(255, 255, 0); // Changed brick color to yellow
-                    rect(brick.x, brick.y, brick.w, brick.h);
-                }
-            }
-        }
-
-        function drawPaddle() {
-            fill(0, 102, 204);
-            rect(paddle.x, paddle.y, paddle.w, paddle.h);
-            if (keyIsDown(LEFT_ARROW) && paddle.x > 0) {
-                paddle.x -= 10;
-            }
-            if (keyIsDown(RIGHT_ARROW) && paddle.x < width - paddle.w) {
-                paddle.x += 10;
-            }
-        }
-
-        function drawBall() {
+        if (snake.endGame()) {
+            background(255, 0, 0);
+            textSize(3);
             fill(255);
-            ellipse(ball.x, ball.y, ball.r * 2);
-            if (!gameOver) {
-                ball.x += ball.xSpeed;
-                ball.y += ball.ySpeed;
+            textAlign(CENTER, CENTER);
+            text('Game Over', w / 2, h / 2);
+            noLoop();
+        }
+    }
 
-                if (ball.x < ball.r || ball.x > width - ball.r) {
-                    ball.xSpeed *= -1;
-                }
-                if (ball.y < ball.r) {
-                    ball.ySpeed *= -1;
-                }
-                if (ball.y > height - ball.r) {
-                    gameOver = true;
-                }
+    function mousePressed() {
+        if (snake.endGame()) {
+            score = 0;
+            snake = new Snake();
+            loop();
+        }
+    }
+
+    class Snake {
+        constructor() {
+            this.body = [];
+            this.body[0] = createVector(floor(w / 2), floor(h / 2));
+            this.xdir = 0;
+            this.ydir = 0;
+            this.len = 0;
+        }
+
+        setDir(x, y) {
+            this.xdir = x;
+            this.ydir = y;
+        }
+
+        update() {
+            let head = this.body[this.body.length - 1].copy();
+
+            this.body.shift();
+
+            head.x += this.xdir;
+            head.y += this.ydir;
+            this.body.push(head);
+
+            if (head.x < 0) {
+                head.x = w - 1;
+            } else if (head.x >= w) {
+                head.x = 0;
+            }
+
+            if (head.y < 0) {
+                head.y = h - 1;
+            } else if (head.y >= h) {
+                head.y = 0;
             }
         }
 
-        function handleCollisions() {
-            if (ball.y + ball.r >= paddle.y && ball.x > paddle.x && ball.x < paddle.x + paddle.w) {
-                ball.ySpeed *= -1;
-                ball.y = paddle.y - ball.r;
-            }
+        grow() {
+            let head = this.body[this.body.length - 1].copy();
+            this.len++;
+            this.body.push(head);
+        }
 
-            for (let brick of bricks) {
-                if (!brick.destroyed) {
-                    if (ball.x > brick.x && ball.x < brick.x + brick.w && ball.y - ball.r < brick.y + brick.h && ball.y + ball.r > brick.y) {
-                        ball.ySpeed *= -1;
-                        brick.destroyed = true;
-                        score += 10;
-                        document.getElementById('score').innerText = 'Score: ' + score;
-                    }
+        endGame() {
+            let x = this.body[this.body.length - 1].x;
+            let y = this.body[this.body.length - 1].y;
+            for (let i = 0; i < this.body.length - 1; i++) {
+                let part = this.body[i];
+                if (part.x === x && part.y === y) {
+                    return true;
                 }
             }
+            return false;
         }
 
-        function keyPressed() {
-            if (key === 'R' || key === 'r') {
-                resetGame();
+        eat(pos) {
+            let x = this.body[this.body.length - 1].x;
+            let y = this.body[this.body.length - 1].y;
+            if (x === pos.x && y === pos.y) {
+                this.grow();
+                return true;
+            }
+            return false;
+        }
+
+        show() {
+            for (let i = 0; i < this.body.length; i++) {
+                fill(0);
+                noStroke();
+                rect(this.body[i].x, this.body[i].y, 1, 1);
             }
         }
-    </script>
+    }
+</script>
 </body>
 </html>
