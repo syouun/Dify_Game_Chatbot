@@ -1,179 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Block Breaker Game</title>
+    <title>石取りゲーム</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        canvas { border: 1px solid #000; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            border: 1px solid #000;
+        }
     </style>
 </head>
 <body>
-<script>
-    let paddle;
-    let ball;
-    let bricks = [];
-    let rows = 5;
-    let cols = 8;
-    let score = 0;
-    let gameOver = false;
+    <script>
+        let stones = 21;
+        let currentPlayer = 1;
+        let gameOver = false;
+        let message = '';
 
-    function setup() {
-        createCanvas(400, 400);
-        paddle = new Paddle();
-        ball = new Ball();
-
-        for (let i = 0; i < rows; i++) {
-            for (let j = 0; j < cols; j++) {
-                bricks.push(new Brick(j * 50 + 10, i * 20 + 30));
-            }
-        }
-    }
-
-    function draw() {
-        background(220);
-        paddle.show();
-        paddle.move();
-
-        ball.show();
-        ball.move();
-        ball.bounceEdges();
-        ball.bouncePaddle(paddle);
-
-        for (let i = bricks.length - 1; i >= 0; i--) {
-            bricks[i].show();
-            if (ball.hits(bricks[i])) {
-                ball.reverse();
-                bricks.splice(i, 1);
-                score++;
-            }
-        }
-
-        if (ball.offScreen()) {
-            gameOver = true;
-        }
-
-        if (gameOver) {
-            fill(0);
-            textSize(32);
+        function setup() {
+            createCanvas(400, 200);
             textAlign(CENTER, CENTER);
-            text("Game Over!", width / 2, height / 2);
-            textSize(16);
-            text("Press R to Restart", width / 2, height / 2 + 30);
-            noLoop();
+            textSize(24);
         }
 
-        fill(0);
-        textSize(16);
-        textAlign(LEFT, TOP);
-        text("Score: " + score, 10, 10);
-    }
-
-    function keyPressed() {
-        if (key === 'R' || key === 'r') {
-            resetGame();
-        }
-    }
-
-    function resetGame() {
-        score = 0;
-        gameOver = false;
-        ball = new Ball();
-        bricks = [];
-        for (let i = 0; i < rows; i++) {
-            for (let j = 0; j < cols; j++) {
-                bricks.push(new Brick(j * 50 + 10, i * 20 + 30));
-            }
-        }
-        loop();
-    }
-
-    class Paddle {
-        constructor() {
-            this.w = 80;
-            this.h = 10;
-            this.x = width / 2 - this.w / 2;
-            this.y = height - this.h - 10;
-            this.speed = 5;
-        }
-
-        show() {
+        function draw() {
+            background(255);
             fill(0);
-            rect(this.x, this.y, this.w, this.h);
-        }
-
-        move() {
-            if (keyIsDown(LEFT_ARROW) && this.x > 0) {
-                this.x -= this.speed;
-            } else if (keyIsDown(RIGHT_ARROW) && this.x < width - this.w) {
-                this.x += this.speed;
-            }
-        }
-    }
-
-    class Ball {
-        constructor() {
-            this.r = 12;
-            this.x = width / 2;
-            this.y = height / 2;
-            this.xSpeed = 3;
-            this.ySpeed = 3;
-        }
-
-        show() {
-            fill(0);
-            ellipse(this.x, this.y, this.r * 2);
-        }
-
-        move() {
-            this.x += this.xSpeed;
-            this.y += this.ySpeed;
-        }
-
-        bounceEdges() {
-            if (this.x < this.r || this.x > width - this.r) {
-                this.xSpeed *= -1;
-            }
-            if (this.y < this.r) {
-                this.ySpeed *= -1;
+            text(`石の数: ${stones}`, width / 2, height / 3);
+            text(`プレイヤー: ${currentPlayer}`, width / 2, height / 2);
+            if (gameOver) {
+                text(message, width / 2, height * 2 / 3);
+                text('Rキーで再スタート', width / 2, height * 5 / 6);
+            } else {
+                text('1～3の石を取ってください', width / 2, height * 5 / 6);
             }
         }
 
-        bouncePaddle(paddle) {
-            if (this.x > paddle.x && this.x < paddle.x + paddle.w && this.y + this.r > paddle.y) {
-                this.ySpeed *= -1;
-                this.y = paddle.y - this.r;
+        function keyPressed() {
+            if (gameOver && key === 'r') {
+                resetGame();
+            } else if (!gameOver && (key === '1' || key === '2' || key === '3')) {
+                let stonesTaken = int(key);
+                if (stones - stonesTaken >= 0) {
+                    stones -= stonesTaken;
+                    if (stones === 0) {
+                        gameOver = true;
+                        message = `プレイヤー ${currentPlayer} の勝ち!`;
+                    } else {
+                        currentPlayer = currentPlayer === 1 ? 2 : 1;
+                    }
+                }
             }
         }
 
-        hits(brick) {
-            return (this.x > brick.x && this.x < brick.x + brick.w && this.y - this.r < brick.y + brick.h && this.y + this.r > brick.y);
+        function resetGame() {
+            stones = 21;
+            currentPlayer = 1;
+            gameOver = false;
+            message = '';
         }
-
-        reverse() {
-            this.ySpeed *= -1;
-        }
-
-        offScreen() {
-            return this.y > height;
-        }
-    }
-
-    class Brick {
-        constructor(x, y) {
-            this.w = 40;
-            this.h = 15;
-            this.x = x;
-            this.y = y;
-        }
-
-        show() {
-            fill(150, 0, 0);
-            rect(this.x, this.y, this.w, this.h);
-        }
-    }
-</script>
+    </script>
 </body>
 </html>
