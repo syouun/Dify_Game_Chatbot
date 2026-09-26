@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>石取りゲーム</title>
+    <title>ブロック崩し</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body {
@@ -11,6 +11,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
             background-color: #f0f0f0;
         }
         canvas {
@@ -20,52 +21,188 @@
 </head>
 <body>
     <script>
-        let stones = 21;
-        let currentPlayer = 1;
+        let paddle;
+        let ball;
+        let bricks = [];
+        let rows = 5;
+        let cols = 10;
+        let score = 0;
         let gameOver = false;
-        let message = '';
 
         function setup() {
-            createCanvas(400, 200);
-            textAlign(CENTER, CENTER);
-            textSize(24);
+            createCanvas(400, 400);
+            paddle = new Paddle();
+            ball = new Ball();
+            createBricks();
         }
 
         function draw() {
-            background(255);
-            fill(0);
-            text(`石の数: ${stones}`, width / 2, height / 3);
-            text(`プレイヤー: ${currentPlayer}`, width / 2, height / 2);
-            if (gameOver) {
-                text(message, width / 2, height * 2 / 3);
-                text('Rキーで再スタート', width / 2, height * 5 / 6);
-            } else {
-                text('1～3の石を取ってください', width / 2, height * 5 / 6);
+            background(0);
+            paddle.show();
+            paddle.update();
+            ball.show();
+            ball.update();
+            ball.checkPaddle(paddle);
+            ball.checkEdges();
+            
+            for (let i = bricks.length - 1; i >= 0; i--) {
+                bricks[i].show();
+                if (ball.hits(bricks[i])) {
+                    if (!bricks[i].destroyed) {
+                        bricks[i].destroy();
+                        ball.reverse();
+                        score += 10;
+                    }
+                }
+            }
+
+            if (ball.offScreen()) {
+                gameOver = true;
+                noLoop();
+            }
+
+            displayScore();
+
+            if (bricks.every(brick => brick.destroyed)) {
+                noLoop();
+                fill(255);
+                textSize(32);
+                textAlign(CENTER);
+                text("You Win!", width / 2, height / 2);
             }
         }
 
         function keyPressed() {
-            if (gameOver && key === 'r') {
+            if (key === ' ' && gameOver) {
                 resetGame();
-            } else if (!gameOver && (key === '1' || key === '2' || key === '3')) {
-                let stonesTaken = int(key);
-                if (stones - stonesTaken >= 0) {
-                    stones -= stonesTaken;
-                    if (stones === 0) {
-                        gameOver = true;
-                        message = `プレイヤー ${currentPlayer} の勝ち!`;
-                    } else {
-                        currentPlayer = currentPlayer === 1 ? 2 : 1;
-                    }
+            }
+        }
+
+        function createBricks() {
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    let brick = new Brick(j * 40, i * 20);
+                    bricks.push(brick);
                 }
             }
         }
 
+        function displayScore() {
+            fill(255);
+            textSize(16);
+            text('Score: ' + score, 10, height - 10);
+            if (gameOver) {
+                textSize(32);
+                textAlign(CENTER);
+                text('Game Over', width / 2, height / 2);
+                textSize(16);
+                text('Press SPACE to restart', width / 2, height / 2 + 30);
+            }
+        }
+
         function resetGame() {
-            stones = 21;
-            currentPlayer = 1;
+            score = 0;
             gameOver = false;
-            message = '';
+            ball = new Ball();
+            bricks = [];
+            createBricks();
+            loop();
+        }
+
+        class Paddle {
+            constructor() {
+                this.width = 80;
+                this.height = 10;
+                this.x = width / 2 - this.width / 2;
+                this.speed = 6;
+            }
+
+            show() {
+                fill(255);
+                rect(this.x, height - this.height - 10, this.width, this.height);
+            }
+
+            update() {
+                if (keyIsDown(LEFT_ARROW)) {
+                    this.x -= this.speed;
+                }
+                if (keyIsDown(RIGHT_ARROW)) {
+                    this.x += this.speed;
+                }
+                this.x = constrain(this.x, 0, width - this.width);
+            }
+        }
+
+        class Ball {
+            constructor() {
+                this.radius = 8;
+                this.x = width / 2;
+                this.y = height - 30;
+                this.xSpeed = random(-2, 2);
+                this.ySpeed = -3;
+            }
+
+            show() {
+                fill(255);
+                ellipse(this.x, this.y, this.radius * 2);
+            }
+
+            update() {
+                this.x += this.xSpeed;
+                this.y += this.ySpeed;
+            }
+
+            reverse() {
+                this.ySpeed *= -1;
+            }
+
+            checkEdges() {
+                if (this.x < 0 || this.x > width) {
+                    this.xSpeed *= -1;
+                }
+                if (this.y < 0) {
+                    this.ySpeed *= -1;
+                }
+            }
+
+            checkPaddle(paddle) {
+                if (this.y + this.radius >= height - paddle.height - 10) {
+                    if (this.x > paddle.x && this.x < paddle.x + paddle.width) {
+                        this.reverse();
+                        this.y = height - paddle.height - 10 - this.radius;
+                    }
+                }
+            }
+
+            hits(brick) {
+                return this.x > brick.x && this.x < brick.x + brick.width &&
+                       this.y - this.radius < brick.y + brick.height && this.y + this.radius > brick.y;
+            }
+
+            offScreen() {
+                return this.y > height;
+            }
+        }
+
+        class Brick {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 40;
+                this.height = 20;
+                this.destroyed = false;
+            }
+
+            show() {
+                if (!this.destroyed) {
+                    fill(255, 0, 0);
+                    rect(this.x, this.y, this.width, this.height);
+                }
+            }
+
+            destroy() {
+                this.destroyed = true;
+            }
         }
     </script>
 </body>
