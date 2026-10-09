@@ -1,170 +1,101 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ブロック崩しゲーム</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+    <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-    <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #000; }
-        canvas { border: 1px solid #fff; }
-    </style>
 </head>
 <body>
     <script>
-        let paddle;
-        let ball;
-        let bricks = [];
-        let rows = 5;
-        let cols = 10;
-        let brickWidth;
-        let brickHeight = 20;
-        let score = 0;
-        let gameOver = false;
+        const CONFIG = {
+            minNumber: 1, // 最小の数
+            maxNumber: 100, // 最大の数
+            maxAttempts: 10, // 最大の試行回数
+            textSize: 32, // 文字の大きさ
+            textColor: '#000000', // 文字の色
+            bgColor: '#a0d8ef', // 背景色
+            buttonColor: '#ffcc00', // ボタンの色
+            buttonHoverColor: '#ff9900', // ボタンのホバー色
+        };
+
+        let targetNumber;
+        let attempts;
+        let gameOver;
+        let message;
 
         function setup() {
-            createCanvas(400, 400);
-            paddle = new Paddle();
-            ball = new Ball();
-            brickWidth = width / cols;
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    bricks.push(new Brick(j * brickWidth, i * brickHeight));
-                }
-            }
+            createCanvas(800, 600);
+            textSize(CONFIG.textSize);
+            resetGame();
         }
 
         function draw() {
-            background(0);
-            paddle.show();
-            paddle.move();
-            ball.show();
-            ball.move();
-            ball.bounceEdge();
-            ball.bouncePaddle(paddle);
-
-            for (let i = bricks.length - 1; i >= 0; i--) {
-                bricks[i].show();
-                if (ball.hitBrick(bricks[i])) {
-                    bricks.splice(i, 1);
-                    score++;
-                }
-            }
-
-            textSize(16);
-            fill(255);
-            text('Score: ' + score, 10, height - 10);
+            background(CONFIG.bgColor);
+            fill(CONFIG.textColor);
+            textAlign(CENTER, CENTER);
+            text(message, width / 2, height / 2 - 100);
 
             if (gameOver) {
-                textSize(32);
-                textAlign(CENTER);
-                text('Game Over', width / 2, height / 2);
-                textSize(16);
-                text('Press R to Restart', width / 2, height / 2 + 30);
-                noLoop();
-            }
-        }
-
-        function keyPressed() {
-            if (key === 'R' || key === 'r') {
-                resetGame();
+                text("R キーを押してもう一度！", width / 2, height / 2 + 100);
             }
         }
 
         function resetGame() {
-            score = 0;
+            targetNumber = floor(random(CONFIG.minNumber, CONFIG.maxNumber + 1));
+            attempts = 0;
             gameOver = false;
-            ball.reset();
-            bricks = [];
-            for (let i = 0; i < rows; i++) {
-                for (let j = 0; j < cols; j++) {
-                    bricks.push(new Brick(j * brickWidth, i * brickHeight));
-                }
-            }
-            loop();
+            message = `1 から ${CONFIG.maxNumber} のすうじをあててね！`;
         }
 
-        class Paddle {
-            constructor() {
-                this.width = 80;
-                this.height = 10;
-                this.x = width / 2 - this.width / 2;
-                this.y = height - this.height - 10;
-                this.speed = 5;
+        function keyPressed() {
+            if (gameOver && key === 'R') {
+                resetGame();
             }
-            show() {
-                fill(255);
-                rect(this.x, this.y, this.width, this.height);
-            }
-            move() {
-                if (keyIsDown(LEFT_ARROW) && this.x > 0) {
-                    this.x -= this.speed;
-                }
-                if (keyIsDown(RIGHT_ARROW) && this.x < width - this.width) {
-                    this.x += this.speed;
-                }
+            return false;
+        }
+
+        function mousePressed() {
+            if (gameOver) {
+                resetGame();
             }
         }
 
-        class Ball {
-            constructor() {
-                this.reset();
-            }
-            reset() {
-                this.x = width / 2;
-                this.y = height / 2;
-                this.radius = 10;
-                this.xSpeed = random(-3, 3);
-                this.ySpeed = 3;
-            }
-            show() {
-                fill(255);
-                ellipse(this.x, this.y, this.radius * 2);
-            }
-            move() {
-                this.x += this.xSpeed;
-                this.y += this.ySpeed;
-            }
-            bounceEdge() {
-                if (this.x < this.radius || this.x > width - this.radius) {
-                    this.xSpeed *= -1;
+        function guessNumber(userGuess) {
+            if (!gameOver) {
+                attempts++;
+                if (userGuess < targetNumber) {
+                    message = `${userGuess} はちいさいよ！あと ${CONFIG.maxAttempts - attempts} かい。`;
+                } else if (userGuess > targetNumber) {
+                    message = `${userGuess} はおおきいよ！あと ${CONFIG.maxAttempts - attempts} かい。`;
+                } else {
+                    message = `おめでとう！${userGuess} がせいかい！`;
+                    gameOver = true;
                 }
-                if (this.y < this.radius) {
-                    this.ySpeed *= -1;
-                }
-                if (this.y > height) {
+
+                if (attempts >= CONFIG.maxAttempts && !gameOver) {
+                    message = `ざんねん！せいかいは ${targetNumber} でした。`;
                     gameOver = true;
                 }
             }
-            bouncePaddle(paddle) {
-                if (this.y + this.radius > paddle.y && this.x > paddle.x && this.x < paddle.x + paddle.width) {
-                    this.ySpeed *= -1;
-                    this.y = paddle.y - this.radius;
-                }
-            }
-            hitBrick(brick) {
-                if (!brick.hit && this.x > brick.x && this.x < brick.x + brickWidth && this.y - this.radius < brick.y + brickHeight && this.y + this.radius > brick.y) {
-                    this.ySpeed *= -1;
-                    brick.hit = true;
-                    return true;
-                }
-                return false;
+        }
+
+        function createButtonWithNumber(num) {
+            let btn = createButton(num);
+            btn.position(20 + (num - CONFIG.minNumber) * 50, height - 50);
+            btn.style('background-color', CONFIG.buttonColor);
+            btn.style('font-size', '16px');
+            btn.mousePressed(() => guessNumber(num));
+            btn.mouseOver(() => btn.style('background-color', CONFIG.buttonHoverColor));
+            btn.mouseOut(() => btn.style('background-color', CONFIG.buttonColor));
+        }
+
+        function createButtons() {
+            for (let i = CONFIG.minNumber; i <= CONFIG.maxNumber; i++) {
+                createButtonWithNumber(i);
             }
         }
 
-        class Brick {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.hit = false;
-            }
-            show() {
-                if (!this.hit) {
-                    fill(255, 0, 0);
-                    rect(this.x, this.y, brickWidth, brickHeight);
-                }
-            }
-        }
+        createButtons();
     </script>
 </body>
 </html>
