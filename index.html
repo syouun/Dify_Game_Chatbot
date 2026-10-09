@@ -22,11 +22,34 @@
         let attempts;
         let gameOver;
         let message;
+        let input;
+        let guessButton;
 
         function setup() {
             createCanvas(800, 600);
             textSize(CONFIG.textSize);
             resetGame();
+
+            input = createInput();
+            input.position(20, height - 50);
+            input.size(100);
+
+            guessButton = createButton('こたえる');
+            guessButton.position(input.x + input.width + 10, height - 50);
+            guessButton.style('background-color', CONFIG.buttonColor);
+            guessButton.mousePressed(() => {
+                const userGuess = parseInt(input.value());
+                if (!isNaN(userGuess)) {
+                    guessNumber(userGuess);
+                }
+            });
+
+            input.changed(() => {
+                const userGuess = parseInt(input.value());
+                if (!isNaN(userGuess)) {
+                    guessNumber(userGuess);
+                }
+            });
         }
 
         function draw() {
@@ -45,13 +68,22 @@
             attempts = 0;
             gameOver = false;
             message = `1 から ${CONFIG.maxNumber} のすうじをあててね！`;
+            if (input) {
+                input.value('');
+            }
         }
 
         function keyPressed() {
-            if (gameOver && key === 'R') {
+            if (gameOver && (key === 'R' || key === 'r')) {
                 resetGame();
             }
-            return false;
+            if (keyCode === ENTER) {
+                const userGuess = parseInt(input.value());
+                if (!isNaN(userGuess)) {
+                    guessNumber(userGuess);
+                }
+            }
+            return keyCode !== UP_ARROW && keyCode !== DOWN_ARROW && keyCode !== LEFT_ARROW && keyCode !== RIGHT_ARROW && keyCode !== 32;
         }
 
         function mousePressed() {
@@ -78,24 +110,6 @@
                 }
             }
         }
-
-        function createButtonWithNumber(num) {
-            let btn = createButton(num);
-            btn.position(20 + (num - CONFIG.minNumber) * 50, height - 50);
-            btn.style('background-color', CONFIG.buttonColor);
-            btn.style('font-size', '16px');
-            btn.mousePressed(() => guessNumber(num));
-            btn.mouseOver(() => btn.style('background-color', CONFIG.buttonHoverColor));
-            btn.mouseOut(() => btn.style('background-color', CONFIG.buttonColor));
-        }
-
-        function createButtons() {
-            for (let i = CONFIG.minNumber; i <= CONFIG.maxNumber; i++) {
-                createButtonWithNumber(i);
-            }
-        }
-
-        createButtons();
     </script>
 </body>
 </html>
