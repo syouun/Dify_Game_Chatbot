@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>ブロック崩し</title>
+    <title>ブロック崩しゲーム</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
-        canvas {
-            display: block;
-            margin: 0 auto;
-            background: #eee;
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
         }
-        #restart {
-            display: none;
-            text-align: center;
-            margin-top: 10px;
+        #gameCanvas {
+            border: 2px solid #fff;
         }
     </style>
 </head>
@@ -21,156 +24,158 @@
         let ball;
         let paddle;
         let bricks = [];
+        let rows = 5;
+        let cols = 7;
         let score = 0;
-        let lives = 3;
-        let gameOver = false;
-        
+        let gameStarted = false;
+
         function setup() {
-            createCanvas(480, 320);
+            createCanvas(400, 400).id('gameCanvas');
             ball = new Ball();
             paddle = new Paddle();
-            // Create bricks
-            let rows = 5;
-            let cols = 8;
-            let brickWidth = width / cols;
-            let brickHeight = 20;
             for (let r = 0; r < rows; r++) {
                 for (let c = 0; c < cols; c++) {
-                    bricks.push(new Brick(c * brickWidth, r * brickHeight, brickWidth, brickHeight));
+                    bricks.push(new Brick(c * 55 + 35, r * 20 + 30));
                 }
             }
-            let restartButton = createButton('再スタート');
-            restartButton.id('restart');
-            restartButton.mousePressed(restart);
         }
 
         function draw() {
-            background(200);
-
-            if (gameOver) {
-                textAlign(CENTER);
-                textSize(32);
-                fill(0);
-                text('ゲームオーバー', width / 2, height / 2);
-                document.getElementById('restart').style.display = 'block';
-                return;
-            }
-
-            ball.update();
-            ball.show();
+            background(0);
             paddle.show();
-
-            for (let i = bricks.length - 1; i >= 0; i--) {
-                bricks[i].show();
-                if (ball.hits(bricks[i])) {
-                    bricks.splice(i, 1);
-                    ball.reverse();
-                    score++;
-                }
-            }
-
-            if (ball.offScreen()) {
-                lives--;
-                if (lives <= 0) {
-                    gameOver = true;
-                } else {
-                    ball.reset();
-                }
-            }
-
             paddle.update();
-            fill(0);
+
+            if (gameStarted) {
+                ball.update();
+                ball.show();
+                ball.checkCollision(paddle);
+                for (let i = bricks.length - 1; i >= 0; i--) {
+                    bricks[i].show();
+                    if (ball.checkCollision(bricks[i])) {
+                        bricks.splice(i, 1);
+                        score++;
+                    }
+                }
+                if (ball.offscreen()) {
+                    gameStarted = false;
+                }
+            }
+
+            fill(255);
             textSize(16);
-            text('スコア: ' + score, 10, 20);
-            text('残りライフ: ' + lives, 10, 40);
+            text("Score: " + score, 10, height - 10);
+            if (!gameStarted) {
+                text("Press SPACE to Start", width / 2 - 60, height / 2);
+            }
         }
 
         function keyPressed() {
-            if (keyCode === LEFT_ARROW) {
-                paddle.move(-15);
-            } else if (keyCode === RIGHT_ARROW) {
-                paddle.move(15);
+            if (key === ' ') {
+                if (!gameStarted) {
+                    resetGame();
+                }
+                gameStarted = true;
             }
         }
 
-        function keyReleased() {
-            if (keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW) {
-                paddle.move(0);
-            }
-        }
-
-        function restart() {
+        function resetGame() {
             score = 0;
-            lives = 3;
-            gameOver = false;
+            ball = new Ball();
+            paddle = new Paddle();
             bricks = [];
-            setup();
-            document.getElementById('restart').style.display = 'none';
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    bricks.push(new Brick(c * 55 + 35, r * 20 + 30));
+                }
+            }
         }
 
         class Ball {
             constructor() {
                 this.reset();
             }
+
             reset() {
-                this.position = createVector(width / 2, height - 30);
-                this.velocity = createVector(2.5, -2.5); // 速さを半分に変更
-                this.radius = 10;
+                this.x = width / 2;
+                this.y = height - 30;
+                this.radius = 12;
+                this.xSpeed = random(2, 4);
+                this.ySpeed = -4;
             }
+
             update() {
-                this.position.add(this.velocity);
-                if (this.position.x > width - this.radius || this.position.x < this.radius) {
-                    this.velocity.x *= -1;
+                this.x += this.xSpeed;
+                this.y += this.ySpeed;
+
+                if (this.x < this.radius || this.x > width - this.radius) {
+                    this.xSpeed *= -1;
                 }
-                if (this.position.y < this.radius) {
-                    this.velocity.y *= -1;
+                if (this.y < this.radius) {
+                    this.ySpeed *= -1;
                 }
             }
+
             show() {
-                fill(127);
-                ellipse(this.position.x, this.position.y, this.radius * 2);
+                fill(255);
+                ellipse(this.x, this.y, this.radius * 2);
             }
-            reverse() {
-                this.velocity.y *= -1;
+
+            checkCollision(obj) {
+                if (obj instanceof Paddle) {
+                    if (this.y + this.radius >= obj.y && this.x >= obj.x && this.x <= obj.x + obj.width) {
+                        this.ySpeed *= -1;
+                        this.y = obj.y - this.radius;
+                        return true;
+                    }
+                } else if (obj instanceof Brick) {
+                    if (this.x + this.radius > obj.x && this.x - this.radius < obj.x + obj.width && 
+                        this.y + this.radius > obj.y && this.y - this.radius < obj.y + obj.height) {
+                        this.ySpeed *= -1;
+                        this.y = obj.y - this.radius;
+                        return true;
+                    }
+                }
+                return false;
             }
-            offScreen() {
-                return this.position.y > height;
-            }
-            hits(brick) {
-                let hit = this.position.x > brick.x && this.position.x < brick.x + brick.width &&
-                          this.position.y + this.radius > brick.y && this.position.y - this.radius < brick.y + brick.height;
-                return hit;
+
+            offscreen() {
+                return this.y > height;
             }
         }
 
         class Paddle {
             constructor() {
-                this.position = createVector(width / 2, height - 10);
-                this.width = 75;
-                this.speed = 0;
+                this.width = 80;
+                this.height = 10;
+                this.x = (width - this.width) / 2;
+                this.y = height - this.height - 10;
             }
-            move(speed) {
-                this.speed = speed;
-            }
+
             update() {
-                this.position.x += this.speed;
-                this.position.x = constrain(this.position.x, 0, width - this.width);
+                if (keyIsDown(LEFT_ARROW) && this.x > 0) {
+                    this.x -= 5;
+                }
+                if (keyIsDown(RIGHT_ARROW) && this.x < width - this.width) {
+                    this.x += 5;
+                }
             }
+
             show() {
                 fill(255);
-                rect(this.position.x, height - 10, this.width, 10);
+                rect(this.x, this.y, this.width, this.height);
             }
         }
 
         class Brick {
-            constructor(x, y, width, height) {
+            constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.width = width;
-                this.height = height;
+                this.width = 50;
+                this.height = 15;
             }
+
             show() {
-                fill(255, 0, 0);
+                fill(200, 50, 50);
                 rect(this.x, this.y, this.width, this.height);
             }
         }
