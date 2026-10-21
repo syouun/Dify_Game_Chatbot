@@ -6,156 +6,208 @@
     <title>ブロック崩し</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #333; color: white; }
-        canvas { border: 1px solid white; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+        }
+        #restart {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <script>
-        let ball;
-        let paddle;
-        let bricks = [];
-        let score = 0;
-        let gameOver = false;
 
-        function setup() {
-            createCanvas(400, 600);
-            ball = new Ball();
-            paddle = new Paddle();
-            for (let i = 0; i < 7; i++) {
-                for (let j = 0; j < 5; j++) {
-                    bricks.push(new Brick(i * 50 + 25, j * 20 + 30));
-                }
+<div id="score"></div>
+<div id="restart" onclick="restartGame()">再スタート</div>
+
+<script>
+    let ball;
+    let paddle;
+    let bricks = [];
+    let score = 0;
+    let rows = 5;
+    let cols = 8;
+    let brickWidth;
+    let brickHeight;
+    let isGameOver = false;
+
+    function setup() {
+        createCanvas(400, 400);
+        ball = new Ball();
+        paddle = new Paddle();
+        brickWidth = width / cols;
+        brickHeight = 20;
+
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                bricks.push(new Brick(j * brickWidth, i * brickHeight));
+            }
+        }
+    }
+
+    function draw() {
+        background(51);
+        for (let brick of bricks) {
+            brick.show();
+        }
+        ball.show();
+        paddle.show();
+        ball.update();
+
+        if (isGameOver) {
+            fill(255, 0, 0);
+            textSize(32);
+            textAlign(CENTER);
+            text("ゲームオーバー", width / 2, height / 2);
+            document.getElementById('restart').style.display = 'block';
+            noLoop();
+            return;
+        } else {
+            document.getElementById('restart').style.display = 'none';
+        }
+
+        paddle.update();
+        ball.checkCollision(paddle);
+
+        for (let i = bricks.length - 1; i >= 0; i--) {
+            if (ball.checkBrick(bricks[i])) {
+                bricks.splice(i, 1);
+                score++;
             }
         }
 
-        function draw() {
-            background(0);
-            ball.update();
-            ball.show();
-            paddle.show();
-            paddle.update();
+        document.getElementById('score').innerText = `スコア: ${score}`;
+        if (bricks.length === 0) {
+            fill(0, 255, 0);
+            textSize(32);
+            textAlign(CENTER);
+            text("クリア!", width / 2, height / 2);
+            noLoop();
+        }
+    }
 
-            for (let i = bricks.length - 1; i >= 0; i--) {
-                bricks[i].show();
-                if (ball.hits(bricks[i])) {
-                    ball.ySpeed *= -1;
-                    bricks.splice(i, 1);
-                    score++;
-                }
+    function keyPressed() {
+        if (keyCode === LEFT_ARROW) {
+            paddle.move(-10);
+        } else if (keyCode === RIGHT_ARROW) {
+            paddle.move(10);
+        }
+    }
+
+    function mouseMoved() {
+        paddle.x = mouseX - paddle.width / 2;
+    }
+
+    function restartGame() {
+        score = 0;
+        isGameOver = false;
+        bricks = [];
+        for (let i = 0; i < rows; i++) {
+            for (let j = 0; j < cols; j++) {
+                bricks.push(new Brick(j * brickWidth, i * brickHeight));
             }
+        }
+        ball = new Ball();
+        loop();
+    }
 
-            if (ball.y > height) {
-                gameOver = true;
+    class Ball {
+        constructor() {
+            this.size = 20;
+            this.x = width / 2;
+            this.y = height - 30;
+            this.xSpeed = 5;
+            this.ySpeed = -5;
+        }
+
+        show() {
+            fill(255);
+            ellipse(this.x, this.y, this.size);
+        }
+
+        update() {
+            this.x += this.xSpeed;
+            this.y += this.ySpeed;
+
+            if (this.x < 0 || this.x > width) {
+                this.xSpeed *= -1;
             }
-
-            if (gameOver) {
-                fill(255, 0, 0);
-                textSize(32);
-                text('Game Over', width / 2 - 80, height / 2);
-                textSize(16);
-                text('Score: ' + score, width / 2 - 30, height / 2 + 30);
-                text('Press R to Restart', width / 2 - 100, height / 2 + 60);
-            } else {
-                fill(255);
-                textSize(16);
-                text('Score: ' + score, 10, 20);
+            if (this.y < 0) {
+                this.ySpeed *= -1;
+            }
+            if (this.y > height) {
+                isGameOver = true;
             }
         }
 
-        function keyPressed() {
-            if (key === ' ') {
-                ball.launch();
-            }
-            if (key === 'R' && gameOver) {
-                restart();
+        checkCollision(paddle) {
+            if (this.y + this.size / 2 >= paddle.y && this.x > paddle.x && this.x < paddle.x + paddle.width) {
+                this.ySpeed *= -1;
+                this.y = paddle.y - this.size / 2;
             }
         }
 
-        function restart() {
-            ball = new Ball();
-            paddle = new Paddle();
-            bricks = [];
-            score = 0;
-            gameOver = false;
-            for (let i = 0; i < 7; i++) {
-                for (let j = 0; j < 5; j++) {
-                    bricks.push(new Brick(i * 50 + 25, j * 20 + 30));
-                }
+        checkBrick(brick) {
+            if (this.x > brick.x && this.x < brick.x + brickWidth && this.y + this.size / 2 >= brick.y && this.y - this.size / 2 <= brick.y + brickHeight) {
+                this.ySpeed *= -1;
+                return true;
             }
+            return false;
+        }
+    }
+
+    class Paddle {
+        constructor() {
+            this.width = 80;
+            this.height = 10;
+            this.x = (width / 2) - (this.width / 2);
+            this.y = height - this.height - 10;
         }
 
-        class Ball {
-            constructor() {
-                this.radius = 12;
-                this.x = width / 2;
-                this.y = height - 30;
-                this.xSpeed = 5;
-                this.ySpeed = -5;
-                this.launched = false;
-            }
-            update() {
-                if (this.launched) {
-                    this.x += this.xSpeed;
-                    this.y += this.ySpeed;
-
-                    if (this.x < this.radius || this.x > width - this.radius) {
-                        this.xSpeed *= -1;
-                    }
-                    if (this.y < this.radius) {
-                        this.ySpeed *= -1;
-                    }
-                    if (this.hits(paddle)) {
-                        this.ySpeed *= -1;
-                        this.y = paddle.y - this.radius;
-                    }
-                }
-            }
-            launch() {
-                this.launched = true;
-            }
-            hits(p) {
-                return (this.x > p.x && this.x < p.x + p.width && this.y + this.radius > p.y);
-            }
-            show() {
-                fill(255);
-                ellipse(this.x, this.y, this.radius * 2);
-            }
+        show() {
+            fill(255);
+            rect(this.x, this.y, this.width, this.height);
         }
 
-        class Paddle {
-            constructor() {
-                this.width = 80;
-                this.height = 10;
-                this.x = width / 2 - this.width / 2;
-                this.y = height - 20;
-            }
-            update() {
-                if (keyIsDown(LEFT_ARROW) && this.x > 0) {
-                    this.x -= 10;
-                }
-                if (keyIsDown(RIGHT_ARROW) && this.x < width - this.width) {
-                    this.x += 10;
-                }
-            }
-            show() {
-                fill(255);
-                rect(this.x, this.y, this.width, this.height);
-            }
+        update() {
+            if (this.x < 0) this.x = 0;
+            if (this.x + this.width > width) this.x = width - this.width;
         }
 
-        class Brick {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.width = 50;
-                this.height = 20;
-            }
-            show() {
-                fill(255, 100, 100);
-                rect(this.x, this.y, this.width, this.height);
-            }
+        move(step) {
+            this.x += step;
         }
-    </script>
+    }
+
+    class Brick {
+        constructor(x, y) {
+            this.x = x;
+            this.y = y;
+            this.width = brickWidth;
+            this.height = brickHeight;
+        }
+
+        show() {
+            fill(200, 100, 100);
+            rect(this.x, this.y, this.width, this.height);
+        }
+    }
+</script>
 </body>
 </html>
