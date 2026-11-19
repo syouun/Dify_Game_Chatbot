@@ -1,157 +1,165 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ブロック崩しゲーム</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
-        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background-color: #222; }
-        canvas { border: 1px solid white; }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        canvas { border: 1px solid black; }
     </style>
 </head>
 <body>
     <script>
         let ball;
         let paddle;
-        let bricks = [];
+        let blocks = [];
         let score = 0;
-        let isGameOver = false;
+        let gameOver = false;
 
         function setup() {
-            createCanvas(400, 600);
+            createCanvas(600, 400);
             ball = new Ball();
             paddle = new Paddle();
             for (let i = 0; i < 5; i++) {
-                for (let j = 0; j < 8; j++) {
-                    bricks.push(new Brick(j * 50 + 25, i * 30 + 30));
+                for (let j = 0; j < 3; j++) {
+                    blocks.push(new Block(i * 120 + 50, j * 20 + 30));
                 }
             }
         }
 
         function draw() {
-            background(0);
-            if (isGameOver) {
-                fill(255);
+            background(220);
+            if (gameOver) {
                 textSize(32);
-                textAlign(CENTER);
-                text('Game Over', width / 2, height / 2);
+                fill(0);
+                text("Game Over", width / 2 - 80, height / 2);
                 textSize(16);
-                text('Score: ' + score, width / 2, height / 2 + 30);
-                text('Press Space to Restart', width / 2, height / 2 + 50);
+                text("スコア: " + score, width / 2 - 40, height / 2 + 30);
+                text("Rで再スタート", width / 2 - 70, height / 2 + 60);
                 return;
             }
 
+            ball.update();
+            ball.show();
             paddle.show();
             paddle.update();
 
-            ball.show();
-            ball.update();
-            ball.checkCollision(paddle);
-
-            for (let i = bricks.length - 1; i >= 0; i--) {
-                bricks[i].show();
-                if (ball.checkCollision(bricks[i])) {
-                    bricks.splice(i, 1);
+            for (let i = blocks.length - 1; i >= 0; i--) {
+                if (ball.hits(blocks[i])) {
+                    blocks.splice(i, 1);
+                    ball.ySpeed *= -1;
                     score++;
                 }
             }
 
-            fill(255);
-            textSize(16);
-            text('Score: ' + score, 10, 20);
-            
-            if (bricks.length === 0) {
-                isGameOver = true;
+            for (let block of blocks) {
+                block.show();
             }
+
+            if (blocks.length === 0) {
+                gameOver = true;
+            }
+
+            fill(0);
+            textSize(16);
+            text("スコア: " + score, 10, 20);
         }
 
         function keyPressed() {
-            if (key === ' ' && isGameOver) {
-                restart();
+            if (key === 'R' || key === 'r') {
+                resetGame();
             }
         }
 
-        function restart() {
-            isGameOver = false;
+        function resetGame() {
+            blocks = [];
             score = 0;
-            bricks = [];
-            for (let i = 0; i < 5; i++) {
-                for (let j = 0; j < 8; j++) {
-                    bricks.push(new Brick(j * 50 + 25, i * 30 + 30));
-                }
-            }
+            gameOver = false;
             ball = new Ball();
             paddle = new Paddle();
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 3; j++) {
+                    blocks.push(new Block(i * 120 + 50, j * 20 + 30));
+                }
+            }
         }
 
         class Ball {
             constructor() {
                 this.x = width / 2;
                 this.y = height - 30;
-                this.r = 12;
-                this.speedX = 5;
-                this.speedY = -5;
-            }
-
-            show() {
-                fill(255, 204, 0);
-                ellipse(this.x, this.y, this.r * 2);
+                this.diameter = 20;
+                this.xSpeed = 5;
+                this.ySpeed = -5;
             }
 
             update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
+                this.x += this.xSpeed;
+                this.y += this.ySpeed;
 
-                if (this.x < this.r || this.x > width - this.r) {
-                    this.speedX *= -1;
+                if (this.x < this.diameter / 2 || this.x > width - this.diameter / 2) {
+                    this.xSpeed *= -1;
                 }
-                if (this.y < this.r) {
-                    this.speedY *= -1;
+                if (this.y < this.diameter / 2) {
+                    this.ySpeed *= -1;
                 }
                 if (this.y > height) {
-                    isGameOver = true;
+                    gameOver = true;
+                }
+
+                if (this.y + this.diameter / 2 >= paddle.y && this.x > paddle.x && this.x < paddle.x + paddle.width) {
+                    this.ySpeed *= -1;
+                    this.y = paddle.y - this.diameter / 2;
                 }
             }
 
-            checkCollision(target) {
-                if (this.x > target.x && this.x < target.x + target.w && this.y + this.r > target.y) {
-                    this.speedY *= -1;
-                    this.y = target.y - this.r;
-                    return true;
-                }
-                return false;
+            show() {
+                fill(127);
+                ellipse(this.x, this.y, this.diameter);
+            }
+
+            hits(block) {
+                return this.x > block.x && this.x < block.x + block.width && this.y - this.diameter / 2 < block.y + block.height && this.y + this.diameter / 2 > block.y;
             }
         }
 
         class Paddle {
             constructor() {
-                this.w = 100;
-                this.h = 20;
-                this.x = width / 2 - this.w / 2;
-            }
-
-            show() {
-                fill(255);
-                rect(this.x, height - this.h - 10, this.w, this.h);
+                this.width = 100;
+                this.height = 10;
+                this.x = width / 2 - this.width / 2;
+                this.y = height - this.height;
             }
 
             update() {
-                this.x = mouseX - this.w / 2;
-                this.x = constrain(this.x, 0, width - this.w);
-            }
-        }
-
-        class Brick {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.w = 50;
-                this.h = 20;
+                if (keyIsDown(LEFT_ARROW)) {
+                    this.x -= 10;
+                } 
+                if (keyIsDown(RIGHT_ARROW)) {
+                    this.x += 10;
+                }
+                this.x = constrain(this.x, 0, width - this.width);
             }
 
             show() {
-                fill(255, 204, 0);
-                rect(this.x, this.y, this.w, this.h);
+                fill(0);
+                rect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        class Block {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 100;
+                this.height = 20;
+            }
+
+            show() {
+                fill(255, 0, 0);
+                rect(this.x, this.y, this.width, this.height);
             }
         }
     </script>
