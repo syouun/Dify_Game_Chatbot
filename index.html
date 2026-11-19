@@ -3,19 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ブロック崩しゲーム</title>
+    <title>ブロック崩し</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #333;
-            color: white;
-            font-family: Arial, sans-serif;
-        }
+        body { display: flex; justify-content: center; align-items: center; height: 100vh; background: #eee; }
+        canvas { border: 1px solid black; }
     </style>
 </head>
 <body>
@@ -23,62 +15,64 @@
         let ball;
         let paddle;
         let bricks = [];
+        let rows = 5;
+        let cols = 7;
         let score = 0;
-        let gameOver = false;
+        let isGameOver = false;
 
         function setup() {
-            createCanvas(480, 320);
+            createCanvas(400, 400);
             ball = new Ball();
             paddle = new Paddle();
-            let rows = 5;
-            let cols = 7;
-            let brickWidth = width / cols;
-            let brickHeight = 20;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    bricks.push(new Brick(c * brickWidth, r * brickHeight));
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    bricks.push(new Brick(j * 60 + 40, i * 20 + 40));
                 }
             }
         }
 
         function draw() {
-            background(0);
-            if (gameOver) {
+            background(200);
+            if (isGameOver) {
                 textSize(32);
-                textAlign(CENTER);
-                fill(255);
-                text('Game Over', width / 2, height / 2);
-                text('Score: ' + score, width / 2, height / 2 + 40);
-                textSize(16);
-                text('Press R to Restart', width / 2, height / 2 + 80);
+                fill(0);
+                text("Game Over", width / 3, height / 2);
                 return;
             }
-
-            ball.update();
-            ball.show();
             paddle.show();
-            paddle.move();
+            ball.show();
+            ball.update();
 
+            if (ball.checkPaddle(paddle)) {
+                ball.speedY *= -1;
+            }
             for (let i = bricks.length - 1; i >= 0; i--) {
-                bricks[i].show();
-                if (ball.hits(bricks[i])) {
-                    ball.reverse();
+                if (ball.checkBrick(bricks[i])) {
                     bricks.splice(i, 1);
+                    ball.speedY *= -1;
                     score++;
                 }
             }
 
-            if (ball.y > height) {
-                gameOver = true;
+            for (let brick of bricks) {
+                brick.show();
             }
 
-            fill(255);
+            if (ball.outOfBounds()) {
+                isGameOver = true;
+            }
+
+            fill(0);
             textSize(16);
-            text('Score: ' + score, 10, 20);
+            text("Score: " + score, 10, 20);
         }
 
         function keyPressed() {
-            if (key === 'r' || key === 'R') {
+            if (keyCode === RIGHT_ARROW) {
+                paddle.move(10);
+            } else if (keyCode === LEFT_ARROW) {
+                paddle.move(-10);
+            } else if (key === 'R' && isGameOver) {
                 resetGame();
             }
         }
@@ -88,25 +82,26 @@
             paddle = new Paddle();
             bricks = [];
             score = 0;
-            gameOver = false;
-            let rows = 5;
-            let cols = 7;
-            let brickWidth = width / cols;
-            let brickHeight = 20;
-            for (let r = 0; r < rows; r++) {
-                for (let c = 0; c < cols; c++) {
-                    bricks.push(new Brick(c * brickWidth, r * brickHeight));
+            isGameOver = false;
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    bricks.push(new Brick(j * 60 + 40, i * 20 + 40));
                 }
             }
         }
 
         class Ball {
             constructor() {
-                this.radius = 12;
                 this.x = width / 2;
                 this.y = height - 30;
-                this.speedX = 3;
-                this.speedY = -3;
+                this.radius = 10;
+                this.speedX = 5;
+                this.speedY = -5;
+            }
+
+            show() {
+                fill(150);
+                ellipse(this.x, this.y, this.radius * 2);
             }
 
             update() {
@@ -121,43 +116,40 @@
                 }
             }
 
-            show() {
-                fill(255);
-                ellipse(this.x, this.y, this.radius * 2);
+            checkPaddle(paddle) {
+                return this.y + this.radius > paddle.y && this.x > paddle.x && this.x < paddle.x + paddle.width;
             }
 
-            reverse() {
-                this.speedY *= -1;
+            checkBrick(brick) {
+                return (
+                    this.x > brick.x &&
+                    this.x < brick.x + brick.width &&
+                    this.y - this.radius < brick.y + brick.height &&
+                    this.y + this.radius > brick.y
+                );
             }
 
-            hits(brick) {
-                return (this.x > brick.x && this.x < brick.x + brick.width &&
-                        this.y - this.radius < brick.y + brick.height &&
-                        this.y + this.radius > brick.y);
+            outOfBounds() {
+                return this.y > height;
             }
         }
 
         class Paddle {
             constructor() {
-                this.width = 75;
+                this.width = 80;
                 this.height = 10;
                 this.x = (width - this.width) / 2;
-                this.y = height - this.height - 10;
-                this.speed = 5;
-            }
-
-            move() {
-                if (keyIsDown(LEFT_ARROW) && this.x > 0) {
-                    this.x -= this.speed;
-                }
-                if (keyIsDown(RIGHT_ARROW) && this.x < width - this.width) {
-                    this.x += this.speed;
-                }
+                this.y = height - 20;
             }
 
             show() {
-                fill(255);
+                fill(100);
                 rect(this.x, this.y, this.width, this.height);
+            }
+
+            move(step) {
+                this.x += step;
+                this.x = constrain(this.x, 0, width - this.width);
             }
         }
 
@@ -165,12 +157,12 @@
             constructor(x, y) {
                 this.x = x;
                 this.y = y;
-                this.width = width / 7;
+                this.width = 60;
                 this.height = 20;
             }
 
             show() {
-                fill(200, 0, 0);
+                fill(255, 0, 0);
                 rect(this.x, this.y, this.width, this.height);
             }
         }
