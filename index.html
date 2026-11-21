@@ -137,21 +137,31 @@
             show() {
                 fill(255);
                 ellipse(this.x, this.y, this.radius * 2);
+                if (this.y > height - this.radius) {
+                    this.ySpeed = -this.ySpeed;
+                }
             }
 
             checkCollision(paddle) {
                 if (this.y + this.radius >= paddle.y && this.x > paddle.x && this.x < paddle.x + paddleWidth) {
                     this.ySpeed *= -1;
                     this.y = paddle.y - this.radius;
+                    this.createEffect(this.x, this.y);
                 }
             }
 
             checkBrickCollision(brick) {
                 if (this.x > brick.x && this.x < brick.x + brickWidth && this.y - this.radius < brick.y + brickHeight && this.y + this.radius > brick.y) {
                     this.ySpeed *= -1;
+                    this.createEffect(this.x, this.y);
                     return true;
                 }
                 return false;
+            }
+
+            createEffect(x, y) {
+                fill(255, 255, 0, 150);
+                ellipse(x, y, this.radius * 4);
             }
         }
 
