@@ -25,6 +25,8 @@
         const brickHeight = 20;
         const paddleWidth = 100;
         const paddleHeight = 10;
+        let leftPressed = false;
+        let rightPressed = false;
 
         function setup() {
             createCanvas(560, 400);
@@ -38,7 +40,7 @@
             }
 
             document.getElementById('restart').addEventListener('click', restart);
-            frameRate(120); // 描画回数を上げる
+            frameRate(120);
         }
 
         function draw() {
@@ -47,6 +49,13 @@
             ball.show();
             ball.checkCollision(paddle);
             paddle.show();
+
+            if (leftPressed) {
+                paddle.move(-20);
+            }
+            if (rightPressed) {
+                paddle.move(20);
+            }
 
             for (let i = bricks.length - 1; i >= 0; i--) {
                 bricks[i].show();
@@ -69,9 +78,17 @@
 
         function keyPressed() {
             if (keyCode === LEFT_ARROW) {
-                paddle.move(-20);
+                leftPressed = true;
             } else if (keyCode === RIGHT_ARROW) {
-                paddle.move(20);
+                rightPressed = true;
+            }
+        }
+
+        function keyReleased() {
+            if (keyCode === LEFT_ARROW) {
+                leftPressed = false;
+            } else if (keyCode === RIGHT_ARROW) {
+                rightPressed = false;
             }
         }
 
@@ -166,6 +183,8 @@
                 rect(this.x, this.y, brickWidth, brickHeight);
             }
         }
+
+        window.addEventListener('keyup', keyReleased);
     </script>
 </body>
 </html>
