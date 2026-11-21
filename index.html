@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>クリックゲーム</title>
+    <title>シンプルなブラウザゲーム</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
     <style>
         body {
@@ -12,66 +12,67 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            background: #f0f0f0;
             font-family: Arial, sans-serif;
-            background-color: #f0f0f0;
         }
-        #gameCanvas {
-            border: 5px solid #333;
-            border-radius: 10px;
-            background-color: #fff;
-            text-align: center;
-            padding: 20px;
+        canvas {
+            border: 1px solid #000;
         }
     </style>
 </head>
 <body>
-    <div id="gameCanvas">
-        <h1>クリックゲーム</h1>
-        <p>スコア: <span id="score">0</span></p>
-        <button id="restartButton" style="display:none;">再スタート</button>
-    </div>
-
     <script>
         let score = 0;
-        let isGameActive = true;
+        let target;
+        let gameActive = true;
 
         function setup() {
-            createCanvas(400, 400).parent('gameCanvas');
-            let button = createButton('クリックしてスコアを加算');
-            button.mousePressed(incrementScore);
-            button.parent('gameCanvas');
-            button.position(50, 200);
-            button.size(300, 50);
+            createCanvas(400, 400);
+            spawnTarget();
         }
 
         function draw() {
-            background(200);
+            background(220);
             fill(0);
-            textSize(32);
-            textAlign(CENTER, CENTER);
-            text("スコア: " + score, width / 2, height / 4);
-            if (!isGameActive) {
+            textSize(24);
+            text("スコア: " + score, 10, 30);
+            
+            if (gameActive) {
+                fill(255, 0, 0);
+                ellipse(target.x, target.y, 40, 40);
+            } else {
+                fill(0);
+                textSize(32);
+                text("ゲームオーバー", width / 2 - 80, height / 2);
                 textSize(24);
-                text("ゲームオーバー!", width / 2, height / 2);
-                document.getElementById('restartButton').style.display = 'block';
+                text("再スタート: スペースキー", width / 2 - 100, height / 2 + 40);
             }
         }
 
-        function incrementScore() {
-            if (isGameActive) {
-                score++;
-                if (score >= 10) { // 10点でゲームオーバー
-                    isGameActive = false;
+        function mousePressed() {
+            if (gameActive) {
+                let d = dist(mouseX, mouseY, target.x, target.y);
+                if (d < 20) {
+                    score++;
+                    spawnTarget();
                 }
             }
         }
 
-        document.getElementById('restartButton').addEventListener('click', restartGame);
+        function keyPressed() {
+            if (!gameActive && key === ' ') {
+                resetGame();
+            }
+        }
 
-        function restartGame() {
+        function spawnTarget() {
+            target = createVector(random(20, width - 20), random(20, height - 20));
+        }
+
+        function resetGame() {
             score = 0;
-            isGameActive = true;
-            document.getElementById('restartButton').style.display = 'none';
+            gameActive = true;
+            spawnTarget();
         }
     </script>
 </body>
